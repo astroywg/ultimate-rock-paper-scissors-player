@@ -15,12 +15,12 @@ def main():
     # Just can't fit that model into my GPU
 
     net = Classifier3d(
-        channels_list=[64, 64, 64, 64, 64],
+        channels_list=[64, 128, 128, 128, 128],
         block_nums=[3, 4, 6, 3]
     ).cuda()
     # summary(net, input_size=(3, 90, 112, 112))
 
-    test_batch_size = 8
+    test_batch_size = 2
     data = torch.randn(test_batch_size, 3, 90, 112, 112, device='cuda')
     target = torch.randint(3, (test_batch_size,), dtype=torch.int64, device='cuda')
     output = net(data)
