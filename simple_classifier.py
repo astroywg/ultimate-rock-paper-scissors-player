@@ -12,6 +12,9 @@ from torchvision import datasets, transforms
 from models.simple_classify import Classifier3d
 
 
+MIN_CLIP_FRAME_NUM = 87
+
+
 def train(net : nn.Module, device, train_loader, optimizer, epoch: int):
 
     print('Epoch {:#2d} ['.format(epoch), end='')
@@ -74,6 +77,9 @@ def test(net : nn.Module, device, test_loader):
 
 def filename_2_video(name: str) -> torch.Tensor:
     video = torchvision.io.read_video(name)[0]
+    frames = video.shape[0]
+    offset = (frames - MIN_CLIP_FRAME_NUM) // 2
+    video = video[offset:(offset+MIN_CLIP_FRAME_NUM)]
     return torch.permute(video, (3, 0, 1, 2))
 
 def discriminate(train: bool) -> Callable[[str], bool]:
@@ -110,8 +116,8 @@ def main():
         is_valid_file=discriminate(train=False)
     )
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=2, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=2, shuffle=True)
     print(len(train_loader), len(test_loader))
 
     # Original ResNext101 size [64, 128, 256, 512, 1024], [3, 24, 36, 3]
