@@ -51,7 +51,7 @@ class Classifier3d(nn.Module):
     "Can Spatiotemporal 3D CNNs Retrace the History of 2D CNNs and ImageNet?": https://arxiv.org/abs/1711.09577
     """
 
-    def __init__(self, channels_list, block_nums, color=True):
+    def __init__(self, channel_nums, block_nums, color=True):
         super().__init__()
 
         in_channels = 3 if color else 1
@@ -59,18 +59,18 @@ class Classifier3d(nn.Module):
 
         self.act = nn.ReLU(inplace=True)
 
-        self.cv1 = nn.Conv3d(in_channels, channels_list[0], kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3), bias=False)
-        self.bn1 = nn.BatchNorm3d(channels_list[0])
+        self.cv1 = nn.Conv3d(in_channels, channel_nums[0], kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3), bias=False)
+        self.bn1 = nn.BatchNorm3d(channel_nums[0])
         self.mp1 = nn.MaxPool3d(kernel_size=3, stride=2, padding=1)
 
         self.cv_layers = nn.Sequential(*[
-            self._make_layer(channels_list[i], channels_list[i+1], block_num=block_nums[i], stride=strides[i])
+            self._make_layer(channel_nums[i], channel_nums[i+1], block_num=block_nums[i], stride=strides[i])
             for i in range(4)
         ])
 
         self.avp = nn.AdaptiveAvgPool3d(output_size=(1, 1, 1))
         self.flt = nn.Flatten()
-        self.fc = nn.Linear(channels_list[4], 3)
+        self.fc = nn.Linear(channel_nums[4], 3)
     
     def _make_layer(self, in_channels, out_channels, block_num, stride=1):
         blocks = []

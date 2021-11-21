@@ -76,10 +76,7 @@ def filename_2_video(name: str) -> torch.Tensor:
     video = torchvision.io.read_video(name)[0]
     return torch.permute(video, (3, 0, 1, 2))
 
-def discriminate(mode: str) -> Callable[[str], bool]:
-
-    assert mode in ['train', 'test']
-    train = mode == 'train'
+def discriminate(train: bool) -> Callable[[str], bool]:
 
     def decide(name: str) -> bool:
         if 'RSP' in name:
@@ -104,13 +101,13 @@ def main():
         'dataset', 
         filename_2_video, 
         transform=train_transform, 
-        is_valid_file=discriminate('train')
+        is_valid_file=discriminate(train=True)
     )
     test_dataset = datasets.DatasetFolder(
         'dataset', 
         filename_2_video, 
         transform=test_transform, 
-        is_valid_file=discriminate('test')
+        is_valid_file=discriminate(train=False)
     )
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True)
@@ -120,10 +117,10 @@ def main():
     # Original ResNext101 size [64, 128, 256, 512, 1024], [3, 24, 36, 3]
     # Just can't fit that model into my GPU
 
-    # net = Classifier3d(
-    #     channels_list=[64, 128, 128, 128, 128],
-    #     block_nums=[3, 4, 6, 3],
-    # )
+    net = Classifier3d(
+        channel_nums=[64, 128, 128, 128, 128],
+        block_nums=[3, 4, 6, 3],
+    )
 
 if __name__ == '__main__':
     main()
