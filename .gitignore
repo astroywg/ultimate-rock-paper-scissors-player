@@ -133,3 +133,6 @@ dataset/
 
 # VS Code settings
 .vscode/
+
+# training checkpoints
+ckpts/
