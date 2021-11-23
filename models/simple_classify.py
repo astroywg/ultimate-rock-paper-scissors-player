@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 
 
-class ResNext3dBlock(nn.Module):
+class ResNet3dBlock(nn.Module):
     def __init__(self, in_channels, out_channels=-1, stride=1):
         super().__init__()
 
-        if out_channels == -1:
+        if out_channels == -1 or in_channels == out_channels:
             out_channels = in_channels
             self.downsample = lambda x: x
         else:
@@ -15,24 +15,17 @@ class ResNext3dBlock(nn.Module):
                 nn.BatchNorm3d(out_channels)
             )
 
-        hidden_channels = out_channels
-        assert hidden_channels % 32 == 0
-
         self.act = nn.ReLU(inplace=True)
 
-        self.cv1 = nn.Conv3d(in_channels, hidden_channels, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn1 = nn.BatchNorm3d(hidden_channels)
+        self.cv1 = nn.Conv3d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm3d(out_channels)
 
-        self.cv2 = nn.Conv3d(hidden_channels, hidden_channels, kernel_size=3, stride=stride, padding=1, groups=32, bias=False)
-        self.bn2 = nn.BatchNorm3d(hidden_channels)
-
-        self.cv3 = nn.Conv3d(hidden_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn3 = nn.BatchNorm3d(out_channels)
+        self.cv2 = nn.Conv3d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm3d(out_channels)
 
     def forward(self, x):
         output = self.act(self.bn1(self.cv1(x)))
-        output = self.act(self.bn2(self.cv2(output)))
-        output = self.bn3(self.cv3(output))
+        output = self.bn2(self.cv2(output))
 
         output += self.downsample(x)
         output = self.act(output)
@@ -44,7 +37,7 @@ class Classifier3d(nn.Module):
     """
     3d CNN for simple classification. 
     
-    Adapted ResNeXt-101 net structure of classifier in
+    Adapted ResNet-10 net structure of detector in
     "Real-time Hand Gesture Detection and Classification Using Convolutional Neural Networks": https://arxiv.org/abs/1901.10323
 
     Also refered to 
@@ -75,9 +68,9 @@ class Classifier3d(nn.Module):
     def _make_layer(self, in_channels, out_channels, block_num, stride=1):
         blocks = []
 
-        blocks.append(ResNext3dBlock(in_channels, out_channels, stride=stride))
+        blocks.append(ResNet3dBlock(in_channels, out_channels, stride=stride))
         for i in range(1, block_num):
-            blocks.append(ResNext3dBlock(out_channels))
+            blocks.append(ResNet3dBlock(out_channels))
 
         return nn.Sequential(*blocks)
         
