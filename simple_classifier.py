@@ -27,13 +27,15 @@ def train(net : nn.Module, device, train_loader, optimizer, epoch: int):
     print('Epoch {:#2d}'.format(epoch))
     net.train()
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(reduction='sum')
 
-    loss_list = []
-    acc_list = []
+    total_loss = torch.tensor(0., device=device)
+    total_acc = torch.tensor(0., device=device)
     
     with tqdm(total=len(train_loader), ncols=120, desc='Train') as t:
         for data, target in train_loader:
+
+            start = time.time()
             data = data.to(device)
             target = target.to(device)
 
@@ -41,19 +43,20 @@ def train(net : nn.Module, device, train_loader, optimizer, epoch: int):
 
             output = net(data)
             loss = criterion(output, target)
-            acc = (output.argmax(1) == target).float().mean()
+            acc = (output.argmax(1) == target).float().sum()
 
             loss.backward()
             optimizer.step()
 
-            loss_list.append(loss.item())
-            acc_list.append(acc.item())
+            total_loss += loss.detach()
+            total_acc += acc.detach()
+            elapsed = time.time() - start
             
-            t.set_postfix(loss=loss.item(), acc=acc.item())
+            t.set_postfix(t=f'{(elapsed):.4f}')
             t.update()
 
-    train_loss = sum(loss_list) / len(loss_list)
-    train_acc = 100. * sum(acc_list) / len(acc_list)
+    train_loss = total_loss.item() / len(train_loader.dataset)
+    train_acc = 100. * total_acc.item() / len(train_loader.dataset)
         
     print('Train loss: {:6.3f}, Train acc: {:7.3f}%'.format(train_loss, train_acc))
     return train_loss, train_acc
@@ -63,10 +66,10 @@ def test(net : nn.Module, device, test_loader):
     
     net.eval()
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(reduction='sum')
 
-    loss_list = []
-    acc_list = []
+    total_loss = torch.tensor(0., device=device)
+    total_acc = torch.tensor(0., device=device)
 
     with tqdm(total=len(test_loader), ncols=120, desc='Test') as t:
         with torch.no_grad():
@@ -76,24 +79,22 @@ def test(net : nn.Module, device, test_loader):
 
                 output = net(data)
                 loss = criterion(output, target)
-                acc = (output.argmax(1) == target).float().mean()
-        
-                loss_list.append(loss.item())
-                acc_list.append(acc.item())
+                acc = (output.argmax(1) == target).float().sum()
 
-                t.set_postfix(loss=loss.item(), acc=acc.item())
+                total_loss += loss.detach()
+                total_acc += acc.detach()
+                
                 t.update()
 
-    test_loss = sum(loss_list) / len(loss_list)
-    test_acc = 100. * sum(acc_list) / len(acc_list)
+    test_loss = total_loss.item() / len(test_loader.dataset)
+    test_acc = 100. * total_acc.item() / len(test_loader.dataset)
         
     print('Test loss: {:6.3f}, Test acc: {:7.3f}%'.format(test_loss, test_acc), end='')
     return test_loss, test_acc
 
 
-convert = transforms.ToTensor()
-
 transform = transforms.Compose([
+    transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
 
@@ -105,7 +106,7 @@ def load_from_filename(name: str) -> torch.Tensor:
     video = video[offset:(offset+MIN_CLIP_FRAME_NUM)] 
 
     images = list(video.numpy())
-    return torch.stack([transform(convert(image).to(device)) for image in images], dim=1) # shape: (T, C, H, W)
+    return torch.stack([transform(image) for image in images], dim=1) # shape: (T, C, H, W)
 
 
 def discriminate(train: bool) -> Callable[[str], bool]:
