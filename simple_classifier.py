@@ -19,6 +19,7 @@ from models.simple_classify import Classifier3d
 MIN_CLIP_FRAME_NUM = 87
 
 
+torch.backends.cudnn.benchmark = True
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -39,7 +40,7 @@ def train(net : nn.Module, device, train_loader, optimizer, epoch: int):
             data = data.to(device)
             target = target.to(device)
 
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
 
             output = net(data)
             loss = criterion(output, target)
@@ -141,8 +142,8 @@ def main():
         is_valid_file=discriminate(train=False)
     )
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=6, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=6, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=6, shuffle=True, num_workers=3, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=6, shuffle=True, num_workers=3, pin_memory=True)
 
     print('Loaded', len(train_loader.dataset), 'train data,', len(test_loader.dataset), 'test data')
 
