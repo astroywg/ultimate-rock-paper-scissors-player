@@ -2,6 +2,10 @@ import time
 from datetime import datetime
 from typing import Callable
 
+import numpy as np
+from scipy.signal import find_peaks
+from scipy.ndimage import gaussian_filter1d
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,6 +21,7 @@ from models.simple_classify import Classifier3d
 
 
 MIN_CLIP_FRAME_NUM = 87
+AUDIO_TO_VIDEO_DROP = 1600
 
 
 torch.backends.cudnn.benchmark = True
@@ -101,8 +106,33 @@ transform = transforms.Compose([
 
 
 def load_from_filename(name: str) -> torch.Tensor:
-    video = torchvision.io.read_video(name)[0]
+    videofile = torchvision.io.read_video(name)
+    video, audio = videofile[0], videofile[1][0]
     frames = video.shape[0]
+
+    aud_to_vid = 1 * AUDIO_TO_VIDEO_DROP
+    peak_dist = 5
+
+    peak_list = [0] * peak_dist
+    for i in range(len(audio)//aud_to_vid):
+        audio_clip = audio[i*aud_to_vid: (i+1)*aud_to_vid].numpy()
+        audio_freq = np.fft.fft(audio_clip)[:aud_to_vid//2]/aud_to_vid
+        audio_freq[1:] = 2 * audio_freq[1:]
+        audio_freq = gaussian_filter1d(np.abs(audio_freq), sigma=10)
+        audio_peak = find_peaks(audio_freq, distance=300, height=0.001)
+        f = np.fft.fftfreq(aud_to_vid, 1/48000)[:aud_to_vid//2]
+        peak_freq = f[audio_peak[0]]
+        peak_list.append(0 if peak_freq.size == 0 else peak_freq[0])
+
+    peak_iist = peak_list + [0] * peak_dist
+    # handle cases when peak detection failed
+    try:
+        peak = find_peaks(peak_list, height=630, distance=peak_dist)[0][0]-2
+    except:
+        peak = frames-10
+
+    # 'peak' value should be placed somewhere appropriate to be used (yet not used)
+
     offset = (frames - MIN_CLIP_FRAME_NUM) // 2
     video = video[offset:(offset+MIN_CLIP_FRAME_NUM)] 
 
