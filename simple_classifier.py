@@ -107,7 +107,7 @@ def load_from_filename(name: str) -> torch.Tensor:
     video = video[offset:(offset+MIN_CLIP_FRAME_NUM)] 
 
     images = list(video.numpy())
-    return torch.stack([transform(image) for image in images], dim=1) # shape: (T, C, H, W)
+    return torch.stack([transform(image) for image in images], dim=1) # shape: (C, T, H, W)
 
 
 def discriminate(train: bool) -> Callable[[str], bool]:
