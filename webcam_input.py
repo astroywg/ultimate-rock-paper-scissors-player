@@ -19,7 +19,7 @@ with torch.no_grad():
     net.eval()
 
     video_b, video_g, video_r = Queue(128), Queue(128), Queue(128)
-    table = ["misc", "rock", "paper", "scissors"]
+    table = ["misc", "rock", "scissors", "paper"]
     
     capture = cv2.VideoCapture(0)
 
