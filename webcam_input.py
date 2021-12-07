@@ -50,6 +50,7 @@ with torch.no_grad():
 
         video = np.array([np.array((list(video_b.queue), list(video_g.queue), list(video_r.queue)))])
         video_capture = torch.from_numpy(video).to(device).float().div(255)
+        video_capture.sub_(0.5).div_(0.5)
 
         result = net(video_capture)[0]
         result = result[-1].argmax()
