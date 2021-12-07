@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torchvision
 
 
 class ResNet3dBlock(nn.Module):
@@ -86,3 +87,27 @@ class Classifier3d(nn.Module):
         output = self.fc(self.flt(self.avp(output)))
 
         return output
+
+
+class Classifier2dLSTM(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.resnet = torchvision.models.resnet18()
+        self.lstm = nn.LSTM(
+            1000,
+            32,
+            num_layers=2,
+            batch_first=True
+        )
+        self.fc = nn.Linear(32, 4)
+
+    def forward(self, x):
+        B, C, T, H, W = x.shape
+
+        output = self.resnet(x.transpose(1, 2).reshape(B * T, C, H, W))
+        output = output.reshape(B, T, 1000)
+        output = self.lstm(output)[0]
+        output = self.fc(output)
+
+        return output  # shape: (B, T, 4)
