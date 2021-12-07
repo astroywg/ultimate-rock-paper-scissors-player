@@ -19,8 +19,9 @@ with torch.no_grad():
     net.eval()
 
     video_b, video_g, video_r = Queue(128), Queue(128), Queue(128)
-    table = ["misc", "rock", "scissors", "paper"]
-    
+    # table = ["misc", "rock", "scissors", "paper"]
+    win_table = ["misc", "paper", "rock", "scissors"]
+
     capture = cv2.VideoCapture(0)
 
     def read_and_put():
@@ -54,12 +55,12 @@ with torch.no_grad():
 
         result = net(video_capture)[0]
         result = result[-1].argmax()
-        result = table[int(result)]
+        result = win_table[int(result)]
 
-        #frame = np.dstack([b, g, r])
-        #cv2.putText(frame, result, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        #cv2.imshow("Result", frame)
-        #cv2.waitKey(1)
+        frame = np.dstack([b, g, r])
+        cv2.putText(frame, result, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.imshow("Result", frame)
+        cv2.waitKey(0)
 
         print(result)
 
