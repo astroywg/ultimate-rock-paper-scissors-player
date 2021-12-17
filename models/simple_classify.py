@@ -111,3 +111,16 @@ class Classifier2dLSTM(nn.Module):
         output = self.fc(output)
 
         return output  # shape: (B, T, 4)
+
+    def get_features(self, frame, device):
+        data = torch.from_numpy(frame).to(device).float()
+        data.div_(255 * 0.5).sub_(1.0)
+        return self.resnet(data.unsqueeze(0))
+
+    def next_output(self, features, state=None):
+        state = [state] if state else []
+
+        output, new_state = self.lstm(features.unsqueeze(0), *state) # output shape: (1, 1, 32)
+        output = self.fc(output.squeeze(0)) # output shape: (1, 4)
+
+        return output, new_state
