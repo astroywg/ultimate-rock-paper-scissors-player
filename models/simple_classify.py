@@ -113,7 +113,7 @@ class Classifier2dLSTM(nn.Module):
         return output  # shape: (B, T, 4)
 
     def get_features(self, frame, device):
-        data = torch.from_numpy(frame).to(device).float()
+        data = torch.from_numpy(frame).to(device=device, dtype=torch.float)
         data.div_(255 * 0.5).sub_(1.0)
         return self.resnet(data.unsqueeze(0))
 

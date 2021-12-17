@@ -65,9 +65,13 @@ class WebcamFrame(SSRContext):
 
 
 class FrameBuffer:
+    '''
+    Thread-safe buffer for image frames.
+    Save the last (size) frames in the buffer.
+    '''
     def __init__(self, size=1):
         self.size = size
-        self.frames = np.zeros((size, 3, 240, 320))
+        self.frames = np.zeros((size, 3, 240, 320), dtype=np.float32)
         self.pos = 0
         self.lock = threading.Lock()
 
@@ -84,6 +88,10 @@ class FrameBuffer:
             else:
                 idx = self.pos % self.size
                 return np.concatenate((self.frames[idx:], self.frames[:idx]))
+
+    def is_full(self):
+        with self.lock:
+            return self.pos >= self.size
 
 
 class BufferedWebcamFrames(SSRContext):
@@ -107,6 +115,8 @@ class BufferedWebcamFrames(SSRContext):
         self.start_time = time.time()
         self.thread = threading.Thread(target=self.update, daemon=True)
         self.thread.start()
+        while not self.buffer.is_full():
+            time.sleep(0.01) # wait until full buffer
 
     def update(self):
         while True:
@@ -140,9 +150,6 @@ class BufferedWebcamFrames(SSRContext):
 def main_2dlstm():
     '''
     Main routine for 2D CNN + LSTM network.
-    Referred to:
-
-    - cv2 window management: https://stackoverflow.com/a/45564409
     '''
 
     net = Classifier2dLSTM().to(device)
@@ -150,19 +157,52 @@ def main_2dlstm():
     net.load_state_dict(torch.load('Classifier2dLSTM.pt', map_location=device))
     net.eval()
 
+    def net_forward(frame, state):
+        return net.next_output(net.get_features(frame, device), state)
+        
+    webcam_loop(1, net_forward)
+
+
+@torch.no_grad()
+def main_3d():
+    '''
+    Main routine for 3D CNN network.
+    '''
+
+    net = Classifier3d(
+        channel_nums=[16, 16, 32, 64, 128],
+        block_nums=[1, 1, 1, 1],
+    ).to(device)
+
+    net.load_state_dict(torch.load('Classifier3d.pt', map_location=device))
+    net.eval()
+
+    def net_forward(frames, state):
+        data = torch.from_numpy(frames).to(device=device, dtype=torch.float).transpose(0, 1).unsqueeze(0)
+        data.div_(255 * 0.5).sub_(1.0)
+        return net(data), state
+
+    webcam_loop(16, net_forward)
+
+
+def webcam_loop(buffer_size, net_forward):
+    '''
+    Main loop for webcam data processing.
+    Referred to https://stackoverflow.com/a/45564409 for cv2 window management.
+    '''
+
     win_table = ["misc", "paper", "rock", "scissors"]
 
-    with BufferedWebcamFrames(fps=30, size=1) as f:
+    with BufferedWebcamFrames(fps=30, size=buffer_size) as f:
         state = None
         while True:
-            frame = f.get().squeeze()
-            features = net.get_features(frame, device)
-            output, state = net.next_output(features, state)
+            frames = f.get().squeeze()
+            output, state = net_forward(frames, state)
             idx = int(output[-1].argmax())
             result = win_table[idx]
 
             screen = f.now()
-            cv2.putText(screen, result, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.putText(screen, 'AI: ' + result, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             cv2.imshow('Result', screen)
             cv2.waitKey(1)
 
