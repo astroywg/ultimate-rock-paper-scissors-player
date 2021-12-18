@@ -213,7 +213,7 @@ def webcam_loop(buffer_size, net_forward):
 
 
 def main():
-    main_2dlstm()
+    main_3d()
 
 if __name__ == '__main__':
     main()

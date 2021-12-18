@@ -64,7 +64,7 @@ class Classifier3d(nn.Module):
 
         self.avp = nn.AdaptiveAvgPool3d(output_size=(1, 1, 1))
         self.flt = nn.Flatten()
-        self.fc = nn.Linear(channel_nums[4], 3)
+        self.fc = nn.Linear(channel_nums[4], 4)
     
     def _make_layer(self, in_channels, out_channels, block_num, stride=1):
         blocks = []
