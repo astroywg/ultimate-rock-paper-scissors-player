@@ -23,6 +23,10 @@ The contributers are ordered in alphabetical order.
   - This is a train/test pipeline for classifying 3-second videos in the `dataset/Paper`, `dataset/Rock`, `dataset/Scissors` folders with 3D CNN. This was a proof-of-concept for testing if 3D CNNs can recognize motions. 
 - `models/simple_classify.py`
   - This file contains the models we used.
+- `notebooks/*`
+  - These files are Colab notebooks that we actually used for finding the hand shapes and training the model. 
+- `requirements.txt`
+  - This is the result of `pip freeze` in a development machine.
 
 ## Directory structure
 
