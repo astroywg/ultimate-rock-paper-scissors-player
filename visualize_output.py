@@ -14,7 +14,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 categories = ['Misc.', 'Rock', 'Scissors', 'Paper']
 abbr_categories = ['M', 'R', 'S', 'P']
 
-def build_confusion_matrix(predict, truth):
+def build_confusion_matrix(result):
+    predict, truth = result
     confusion_matrix = np.zeros((len(categories), len(categories)))
     for i in range(predict.size):
         row = categories.index(truth[i])
@@ -76,13 +77,15 @@ def test(net: nn.Module):
         optimizer.zero_grad(set_to_none=True)
 
         output = net(data)
-        output = output.flatten(end_dim=-2)
+        output = output.flatten(end_dim=-2).argmax(1)
         target = target.flatten()
 
-        predict.append(output.argmax(1))
-        truth.append(target.argmax(1))
+        for o in output:
+            predict.append(categories[int(o)])
+        for t in target:
+            truth.append(categories[int(t)])
 
-    return predict, truth
+    return np.array(predict), np.array(truth)
 
 
 def main():
