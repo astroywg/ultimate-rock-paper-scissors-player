@@ -7,7 +7,7 @@
 The contributers are ordered in alphabetical order.
 
 - Team 19
-  - Dohyeong Kim
+  - Dohyeong Kim (@lastnone)
   - Woongyeong Yeo (@astroywg)
   - Yunghee Lee (@iv-y)
 
