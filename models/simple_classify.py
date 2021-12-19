@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torchvision
 
 
 class ResNet3dBlock(nn.Module):
@@ -63,7 +64,7 @@ class Classifier3d(nn.Module):
 
         self.avp = nn.AdaptiveAvgPool3d(output_size=(1, 1, 1))
         self.flt = nn.Flatten()
-        self.fc = nn.Linear(channel_nums[4], 3)
+        self.fc = nn.Linear(channel_nums[4], 4)
     
     def _make_layer(self, in_channels, out_channels, block_num, stride=1):
         blocks = []
@@ -86,3 +87,40 @@ class Classifier3d(nn.Module):
         output = self.fc(self.flt(self.avp(output)))
 
         return output
+
+
+class Classifier2dLSTM(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.resnet = torchvision.models.resnet18()
+        self.lstm = nn.LSTM(
+            1000,
+            32,
+            num_layers=2,
+            batch_first=True
+        )
+        self.fc = nn.Linear(32, 4)
+
+    def forward(self, x):
+        B, C, T, H, W = x.shape
+
+        output = self.resnet(x.transpose(1, 2).reshape(B * T, C, H, W))
+        output = output.reshape(B, T, 1000)
+        output = self.lstm(output)[0]
+        output = self.fc(output)
+
+        return output  # shape: (B, T, 4)
+
+    def get_features(self, frame, device):
+        data = torch.from_numpy(frame).to(device=device, dtype=torch.float)
+        data.div_(255 * 0.5).sub_(1.0)
+        return self.resnet(data.unsqueeze(0))
+
+    def next_output(self, features, state=None):
+        state = [state] if state else []
+
+        output, new_state = self.lstm(features.unsqueeze(0), *state) # output shape: (1, 1, 32)
+        output = self.fc(output.squeeze(0)) # output shape: (1, 4)
+
+        return output, new_state

@@ -130,6 +130,7 @@ dmypy.json
 
 # datasets
 dataset/
+data/
 
 # VS Code settings
 .vscode/
